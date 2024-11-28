@@ -97,7 +97,7 @@ router.post("/login", (req, res) => {
   });
 });
 
-// Verify account (admin action)
+// Verify account 
 router.post("/verifyAccount", (req, res) => {
   const { user_id, status_name, admin_id } = req.body;
 
@@ -133,7 +133,7 @@ router.post("/verifyAccount", (req, res) => {
 
     const status_ID = results[0].status_ID;
 
-    // Update the status for the fetched status_ID
+    // Update status_ID
     const updateStatusQuery = `
       UPDATE Status 
       SET status_name = ?, description = ?, last_updated = NOW()
@@ -151,7 +151,7 @@ router.post("/verifyAccount", (req, res) => {
   });
 });
 
-// Restricted login for verified accounts only
+// For Verified Accounts
 router.post("/restrictedLogin", (req, res) => {
   const { email, password } = req.body;
 
