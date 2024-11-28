@@ -27,7 +27,7 @@ router.post("/register", async (req, res) => {
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // pending status
+      // Insert user into the database
       const insertUserQuery =
         "INSERT INTO User (name, email, password, user_type) VALUES (?, ?, ?, ?)";
       req.db.query(
@@ -39,19 +39,22 @@ router.post("/register", async (req, res) => {
             return res.status(500).json({ message: "Internal server error" });
           }
 
-          // Adds the initial pending status
-          const userId = result.insertId;
-          const insertStatusQuery =
-            "INSERT INTO Status (status_context, status_name, user_ID) VALUES ('Verification', 'Pending', ?)";
-          req.db.query(insertStatusQuery, [userId], (err) => {
+          const user_id = result.insertId;
+
+          // Insert the user's initial 'Pending' status
+          const insertStatusQuery = `
+            INSERT INTO Status (status_context, status_name, description, user_id, created_date, last_updated)
+            VALUES ('Verification', 'Pending', 'Account awaiting admin verification', ?, NOW(), NOW())
+          `;
+          req.db.query(insertStatusQuery, [user_id], (err) => {
             if (err) {
-              console.error("Error setting status:", err);
+              console.error("Error inserting status:", err);
               return res.status(500).json({ message: "Internal server error" });
             }
 
             res.status(201).json({
-              message: "User registered and awaiting admin verification.",
-              user_id: userId,
+              message: "User has been created and is awaiting verification.",
+              user_id,
             });
           });
         }
@@ -63,8 +66,39 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Admin verification endpoint
-router.post("/verify", (req, res) => {
+
+// Login a user
+router.post("/login", (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: "All fields are required!" });
+  }
+
+  const query = "SELECT * FROM User WHERE email = ?";
+  req.db.query(query, [email], async (err, result) => {
+    if (err) {
+      console.error("Error querying database:", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+
+    if (result.length === 0) {
+      return res.status(400).json({ message: "Invalid credentials!" });
+    }
+
+    const user = result[0];
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials!" });
+    }
+
+    res.status(200).json({ message: "Login successful!", user });
+  });
+});
+
+// Verify account (admin action)
+router.post("/verifyAccount", (req, res) => {
   const { user_id, status_name, admin_id } = req.body;
 
   if (!user_id || !status_name || !admin_id) {
@@ -75,20 +109,50 @@ router.post("/verify", (req, res) => {
     return res.status(400).json({ message: "Invalid status name!" });
   }
 
-  const updateStatusQuery =
-    "UPDATE Status SET status_name = ?, last_updated = NOW(), admin_id = ? WHERE user_ID = ?";
-  req.db.query(updateStatusQuery, [status_name, admin_id, user_id], (err) => {
+  const description =
+    status_name === "Accepted"
+      ? "Account verified by admin"
+      : "Account declined by admin";
+
+  // First, fetch the status_ID for the given user_id
+  const fetchStatusIdQuery = `
+    SELECT status_ID 
+    FROM Status 
+    WHERE user_id = ? AND status_context = 'Verification'
+  `;
+
+  req.db.query(fetchStatusIdQuery, [user_id], (err, results) => {
     if (err) {
-      console.error("Error updating status:", err);
+      console.error("Error fetching status_ID:", err);
       return res.status(500).json({ message: "Internal server error" });
     }
 
-    res.status(200).json({ message: `User status updated to ${status_name}.` });
+    if (results.length === 0) {
+      return res.status(404).json({ message: "Status not found for the given user." });
+    }
+
+    const status_ID = results[0].status_ID;
+
+    // Update the status for the fetched status_ID
+    const updateStatusQuery = `
+      UPDATE Status 
+      SET status_name = ?, description = ?, last_updated = NOW()
+      WHERE status_ID = ?
+    `;
+
+    req.db.query(updateStatusQuery, [status_name, description, status_ID], (err) => {
+      if (err) {
+        console.error("Error updating status:", err);
+        return res.status(500).json({ message: "Internal server error" });
+      }
+
+      res.status(200).json({ message: `User status updated to ${status_name}.` });
+    });
   });
 });
 
-// Login a user (only verified accounts)
-router.post("/login", (req, res) => {
+// Restricted login for verified accounts only
+router.post("/restrictedLogin", (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -99,7 +163,9 @@ router.post("/login", (req, res) => {
     SELECT u.*, s.status_name 
     FROM User u
     JOIN Status s ON u.user_ID = s.user_ID
-    WHERE u.email = ?`;
+    WHERE u.email = ? AND s.status_context = 'Verification'
+  `;
+
   req.db.query(query, [email], async (err, result) => {
     if (err) {
       console.error("Error querying database:", err);
@@ -107,7 +173,7 @@ router.post("/login", (req, res) => {
     }
 
     if (result.length === 0) {
-      return res.status(400).json({ message: "Invalid credentials!" });
+      return res.status(400).json({ message: "Invalid credentials or account not found!" });
     }
 
     const user = result[0];
