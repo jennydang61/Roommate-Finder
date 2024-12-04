@@ -44,7 +44,7 @@ router.post("/register", async (req, res) => {
           // Insert the user's initial 'Pending' status
           const insertStatusQuery = `
             INSERT INTO Status (status_context, status_name, description, user_id, created_date, last_updated)
-            VALUES ('Verification', 'Pending', 'Account awaiting admin verification', ?, NOW(), NOW())
+            VALUES ('Verification', 'Pending', 'Waiting for verification', ?, NOW(), NOW())
           `;
           req.db.query(insertStatusQuery, [user_id], (err) => {
             if (err) {
@@ -53,7 +53,7 @@ router.post("/register", async (req, res) => {
             }
 
             res.status(201).json({
-              message: "User has been created and is awaiting verification.",
+              message: "User has been created and is waiting for verification.",
               user_id,
             });
           });
@@ -96,6 +96,81 @@ router.post("/login", (req, res) => {
     res.status(200).json({ message: "Login successful!", user });
   });
 });
+
+// Fetch all pending users
+router.get("/admin/pendingUsers", (req, res) => {
+  console.log("GET /admin/pendingUsers called");
+  const query = `
+    SELECT u.user_ID, u.name, u.email, s.status_name, s.description 
+    FROM User u
+    JOIN Status s ON u.user_ID = s.user_id
+    WHERE s.status_context = 'Verification' AND s.status_name = 'Pending'
+  `;
+
+  req.db.query(query, (err, results) => {
+    if (err) {
+      console.error("Error fetching pending users:", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+
+    console.log("Results:", results);
+    res.status(200).json(results);
+  });
+});
+
+// Approve or decline a user
+router.post("/admin/updateUserStatus", (req, res) => {
+  const { user_id, status_name, admin_id } = req.body;
+
+  if (!user_id || !status_name || !admin_id) {
+    return res.status(400).json({ message: "All fields are required!" });
+  }
+
+  if (!["Accepted", "Declined"].includes(status_name)) {
+    return res.status(400).json({ message: "Invalid status name!" });
+  }
+
+  const description =
+    status_name === "Accepted"
+      ? "Account verified by admin"
+      : "Account declined by admin";
+
+  // Update the user's status in the Status table
+  const updateStatusQuery = `
+    UPDATE Status
+    SET status_name = ?, description = ?, last_updated = NOW()
+    WHERE user_id = ? AND status_context = 'Verification'
+  `;
+
+  req.db.query(updateStatusQuery, [status_name, description, user_id], (err) => {
+    if (err) {
+      console.error("Error updating user status:", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+
+    // Move the user to the appropriate table (Accepted or Declined)
+    const targetTable = status_name === "Accepted" ? "Accepted" : "Declined";
+    const column = status_name === "Accepted" ? "accepted_by" : "declined_by";
+
+    const insertQuery = `
+      INSERT INTO ${targetTable} (status_ID, ${column})
+      SELECT status_ID, ? FROM Status
+      WHERE user_id = ? AND status_context = 'Verification'
+    `;
+
+    req.db.query(insertQuery, [admin_id, user_id], (err) => {
+      if (err) {
+        console.error(`Error moving user to ${targetTable} table:`, err);
+        return res.status(500).json({ message: "Internal server error" });
+      }
+
+      res.status(200).json({ message: `User status updated to ${status_name} and moved to ${targetTable} table.` });
+    });
+  });
+});
+
+
+
 
 // Verify account 
 router.post("/verifyAccount", (req, res) => {
@@ -146,7 +221,7 @@ router.post("/verifyAccount", (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
       }
 
-      res.status(200).json({ message: `User status updated to ${status_name}.` });
+      res.status(200).json({ message: `${status_name}.` });
     });
   });
 });
