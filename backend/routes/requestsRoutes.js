@@ -4,12 +4,7 @@ const router = express.Router();
 
 // send message requests
 router.post("/send", async (req, res) => {
-    const { receiver_ID, sender_ID, description } = req.body;
-
-    // hard code for testing
-    //const receiver_ID = 2;
-    //const sender_ID = 1;
-    //const description = "This is a test request description";
+    const { receiver_ID, sender_ID, sender_name, description } = req.body;
 
     try {
         const statusQuery = `
@@ -25,11 +20,12 @@ router.post("/send", async (req, res) => {
             const status_ID = statusResult.insertId;
 
             const requestQuery = `
-            INSERT INTO RoommateRequest (receiver_ID, sender_ID, status_ID)
-            VALUES (?, ?, ?);
-            `;
+            INSERT INTO RoommateRequest (receiver_ID, sender_ID, status_ID, sender_name)
+            VALUES (?, ?, ?, ?);
+        `;
+        
 
-            req.db.query(requestQuery, [receiver_ID, sender_ID, status_ID], (err, requestResult) => {
+            req.db.query(requestQuery, [receiver_ID, sender_ID, status_ID, sender_name], (err, requestResult) => {
                 if (err) {
                     return res.status(500).json({ error: "Error inserting into RoommateRequest", details: err.message });
                 }
@@ -49,13 +45,9 @@ router.post("/send", async (req, res) => {
 router.post("/accept", async (req, res) => {
     const { receiver_ID, accepted_by } = req.body;
 
-    // hard code for testing works
-    //const receiver_ID = 2;
-    //const accepted_by = 1;
-
     try {
         const statusQuery = `
-        SELECT status_ID FROM RoommateRequest WHERE receiver_ID = ?;
+        SELECT status_ID, sender_name FROM RoommateRequest WHERE receiver_ID = ?;
         `;
         
         req.db.query(statusQuery, [receiver_ID], (err, result) => {
@@ -105,13 +97,9 @@ router.post("/accept", async (req, res) => {
 router.post("/decline", async (req, res) => {
     const { receiver_ID, declined_by } = req.body;
 
-    // hard code for testing works
-    //const receiver_ID = 2;
-    //const accepted_by = 1;
-
     try {
         const statusQuery = `
-        SELECT status_ID FROM RoommateRequest WHERE receiver_ID = ?;
+        SELECT status_ID, sender_name FROM RoommateRequest WHERE receiver_ID = ?;
         `;
         
         req.db.query(statusQuery, [receiver_ID], (err, result) => {
@@ -163,7 +151,7 @@ router.get("/status", async (req, res) => {
 
     try {
         const statusQuery = `
-        SELECT S.status_name 
+        SELECT S.status_name, RR.sender_name
         FROM RoommateRequest AS RR
         NATURAL JOIN Status AS S
         WHERE RR.receiver_ID = ? OR RR.sender_ID = ?;
@@ -185,4 +173,4 @@ router.get("/status", async (req, res) => {
     }
 });
 
-export default router
+export default router;
