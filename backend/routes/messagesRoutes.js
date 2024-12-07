@@ -2,6 +2,7 @@ import express from "express";
 
 const router = express.Router();
 
+// this is suppose to get the chat list of who the user is talking to. im not sure if its working
 router.get("/chatUsers", (req, res) => {
     const { user_ID } = req.query;
 
