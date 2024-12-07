@@ -7,12 +7,9 @@ import HeaderLayout from './header/headerLayout';
 import Requests from './requests/Requests';
 import Messages from './messages/Messages';
 import Account from './account/Account';
-import Admin from './admin';
+import Admin from './admin/admin';
 import CreateProfile from './register/createProfile';
-import TestWebSocket from "./TestWebSocket";
 
-
-// TestWebSocket is for testing
 function App() {
     return (
         <Router>
@@ -22,18 +19,13 @@ function App() {
                 <Route path="/createProfile" element={<CreateProfile />} />
                 <Route path="/signIn" element={<SignIn />} />
                 <Route path="/Admin" element={<Admin />} />
-                <Route path="/Home" element={ <HeaderLayout> <Home /></HeaderLayout>}/>
+                <Route path="/Home" element={<HeaderLayout><Home /></HeaderLayout>} />
                 <Route path="/Requests" element={<HeaderLayout><Requests /></HeaderLayout>} />
                 <Route path="/Messages" element={<HeaderLayout><Messages /></HeaderLayout>} />
-                <Route path="/Account" element={ <HeaderLayout> <Account /></HeaderLayout>}/>
-                <Route path="/test" element={<TestWebSocket />} />
+                <Route path="/Account" element={<HeaderLayout><Account /></HeaderLayout>} />
             </Routes>
         </Router>
-
     );
 }
 
 export default App;
-
-//<Route path="/Messages/:user2_ID" element={<HeaderLayout><Messages /></HeaderLayout>} />
-// <Route path="/Messages" element={<HeaderLayout><Chatlist /></HeaderLayout>} />
