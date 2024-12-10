@@ -1,0 +1,81 @@
+/* General page styling */
+body {
+    font-family: 'Outfit', sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #FFF6EE;
+  }
+  
+  /* Main container for the messages */
+  #messages-container {
+    background-color: #ffffff;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 400px;
+    max-width: 100%;
+    padding: 20px;
+    text-align: center;
+  }
+  
+
+  h2, h3 {
+    margin: 0 0 15px;
+    color: #262628;
+  }
+  
+  /* Chat user list */
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: #f9f9f9;
+  }
+  
+  /* Buttons */
+  button {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    background-color: #e1b573;
+    color: #262628;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+    border: 2px solid #262628;
+    box-shadow: -3px 3px 0px #262628;
+    border: 2px solid #262628;
+  }
+  
+  button:hover {
+    background-color: #e1b573;
+  }
+  
+  /* Input field */
+  input[type="text"] {
+    width: calc(100% - 22px); /* Ensure it fits inside the container */
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-bottom: 10px;
+  }
+  
+  input[type="text"]:focus {
+    outline: none;
+    border-color: #e1b573;
+  }
+  

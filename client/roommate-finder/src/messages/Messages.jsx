@@ -26,7 +26,7 @@ const Messages = () => {
   };
 
   return (
-    <div>
+    <div id="messages-container">
       <h2>Messages</h2>
       {currentChat ? (
         <div>
@@ -58,7 +58,7 @@ const Messages = () => {
         </ul>
       )}
     </div>
-  );
+  );  
 };
 
 export default Messages;
